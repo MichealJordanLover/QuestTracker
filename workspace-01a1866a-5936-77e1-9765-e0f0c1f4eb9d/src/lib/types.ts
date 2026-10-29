@@ -1,0 +1,10 @@
+export type Region = {id:string;is_global:boolean;regions:{include:string[];exclude:string[]}};
+export type Quest = {id:string;config:{starts_at:string;expires_at:string;messages?:{quest_name?:string;game_title?:string;game_publisher?:string};assets?:{hero?:string};task_config_v2?:{tasks:Record<string,{target?:number}>};task_config?:{tasks:Record<string,{target?:number}>};rewards_config?:{rewards:{name?:string;messages?:{name?:string};orb_quantity?:number}[]};rewards?:{name?:string}[]};region:Region};
+export const title=(q:Quest)=>q.config.messages?.quest_name||q.config.messages?.game_title||'Discord quest';
+export const reward=(q:Quest)=> (q.config.rewards_config?.rewards||q.config.rewards||[]).map(x=>('messages' in x ? (x.messages as {name?:string}|undefined)?.name : undefined)||x.name||('orb_quantity' in x && x.orb_quantity ? `${x.orb_quantity} Orbs`:null)).filter(Boolean).join(' · ')||'See Discord for reward';
+const display=new Intl.DisplayNames(['en'],{type:'region'});
+export const country=(s:string)=>{try{return display.of(s==='UK'?'GB':s)||s}catch{return s}};
+export function regionText(r:Region){const {include=[],exclude=[]}=r.regions||{};if(r.is_global&&!exclude.length)return 'Worldwide';if(include.length)return include.map(country).join(', ');if(exclude.length)return 'Worldwide except '+exclude.map(country).join(', ');return 'Availability unknown'}
+export function kind(q:Quest){const keys=Object.keys(q.config.task_config_v2?.tasks||q.config.task_config?.tasks||{});return keys.some(x=>x.includes('WATCH'))?'Watch':keys.some(x=>x.includes('STREAM'))?'Stream':keys.some(x=>x.includes('PLAY'))?'Play':'Quest'}
+export function duration(q:Quest){const tasks=Object.values(q.config.task_config_v2?.tasks||q.config.task_config?.tasks||{});const vals=tasks.map(t=>t.target).filter((x):x is number=>typeof x==='number'&&x>0);if(!vals.length)return 'See Discord';let t=Math.min(...vals);return t>=60?`${Math.ceil(t/60)} min`:`${t} sec`}
+export function image(q:Quest){const a=q.config.assets?.hero;if(!a||a==='PLACEHOLDER')return '';return a.startsWith('quests/')?'https://cdn.discordapp.com/'+a:'https://cdn.discordapp.com/quests/'+q.id+'/'+a}
